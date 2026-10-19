@@ -536,22 +536,31 @@ class EcoVacsXMPP(ClientXMPP):
         result = xml.attrib.copy()
         if "td" not in result:
             if not len(xml):
-                # This happens for commands with no response data, such as PlaySound
-                return
-
-            payload = xml[0]
-            result["event"] = {
-                "clean": "clean_report",
-                "charge": "charge_state",
-                "battery": "battery_info",
-                "ctl": "life_span",
-                "error": "error",
-            }.get(payload.tag.rsplit("}", 1)[-1])
-            if result["event"] is None:
-                return
-            result.update(payload.attrib)
+                if "type" in result and "val" in result:
+                    result["event"] = "life_span"
+                else:
+                    # This happens for commands with no response data, such as PlaySound
+                    return
+            else:
+                payload = xml[0]
+                result["event"] = {
+                    "clean": "clean_report",
+                    "charge": "charge_state",
+                    "battery": "battery_info",
+                    "ctl": "life_span",
+                    "error": "error",
+                }.get(payload.tag.rsplit("}", 1)[-1])
+                if result["event"] is None:
+                    return
+                result.update(payload.attrib)
         else:
-            result["event"] = result.pop("td")
+            event = result.pop("td")
+            result["event"] = {
+                "GetCleanState": "clean_report",
+                "GetChargeState": "charge_state",
+                "GetBatteryInfo": "battery_info",
+                "GetLifeSpan": "life_span",
+            }.get(event, event)
             if len(xml):
                 result.update(xml[0].attrib)
 
